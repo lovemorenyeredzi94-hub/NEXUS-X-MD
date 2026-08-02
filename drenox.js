@@ -5499,7 +5499,7 @@ ${prefix}twitterstalk ☠︎︎ 𝙽𝙴𝚇𝚄𝚂-𝚇 𝙼𝙳 ☠︎︎`)
     if (!data) return reply('❌ ᴜsᴇʀ ɴᴏᴛ ғᴏᴜɴᴅ')
     
     await bad.sendMessage(from, {
-      image: { url: data.profile_image_url || data.avatar || https://i.postimg.cc/G2TZMDFN/Chat-GPT-Image-Jul-31-2026-09-22-12-PM.png' },
+      image: { url: data.profile_image_url || data.avatar || 'https://i.postimg.cc/G2TZMDFN/Chat-GPT-Image-Jul-31-2026-09-22-12-PM.png' },
       caption: `*╭━━〔 🐦 ᴛᴡɪᴛᴛᴇʀ/x sᴛᴀʟᴋ 〕━━┈⊷*
 ┃
 ┃ 👤 ᴜsᴇʀɴᴀᴍᴇ: ${data.username || data.screen_name || 'N/A'}
@@ -6421,7 +6421,7 @@ case 'song': {
     const video = search.videos[0]
 
     // 2️⃣ API Call
-    const api = `https://api.ootaizumi.web.id/downloader/youtube`
+    const api = `https://arslan-apis-v2.vercel.app/download/ytmp3?url=${video.url}`
     const { data } = await axios.get(api, {
       params: {
         url: video.url,
@@ -11736,7 +11736,7 @@ case 'groq': {
     
     try {
         // ✅ NO loading message - direct API call
-        const GROQ_API_KEY = "YOUR_GROQ_API_KEY";
+        const GROQ_API_KEY = "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";
         
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',

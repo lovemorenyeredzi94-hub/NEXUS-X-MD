@@ -108,9 +108,9 @@ const sendChannelsRequiredMessage = async (chatId) => {
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [
-          [{ text: '📢 Channel 1', url: 'https://t.me/iconxmdtech' }],
-          [{ text: '👥 Group', url: 'https://t.me/' }],
-          [{ text: '📢 Channel 2', url: 'https://t.me/iconxmd' }],
+          [{ text: '📢 Channel 1', url: 'https://t.me/iconxmd' }],
+          [{ text: '📢 Channel 2', url: 'https://t.me/iconxmdtech' }],
+          [{ text: '👥 Group', url: 'https://t.me/nexusxmd' }],
           [{ text: '✅ I have joined', callback_data: 'check_join' }]
         ]
       }
@@ -155,13 +155,13 @@ bot.onText(/\/start/, async (msg) => {
   // Private chat mein normal start message
   await bot.sendPhoto(
     chatId,
-    "https://i.postimg.cc/G2TZMDFN/Chat-GPT-Image-Jul-31-2026-09-22-12-PM.png",
+    "https://i.postimg.cc/NMn8rzqh/image1.png",
     {
-      caption: `🪀 *♡ℕ𝔼𝕏𝕌𝕊-𝕏 𝕄𝔻💀*\n\n╔════════════════════╗\n ⤷ /pair <wa_number>\n ⤷ /unpair <wa_number>\n╚════════════════════╝`,
+      caption: `💜 *𝙽𝙴𝚇𝚄𝚂-𝚇 𝙼𝙳💀*\n\n╔════════════════════╗\n ⤷ /pair <wa_number>\n ⤷ /unpair <wa_number>\n╚════════════════════╝`,
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [
-          [{ text: "👑 Owner", url: "https://t.me/chill1lord" }]
+          [{ text: "👑 Owner", url: "https://t.me/shadowhacr" }]
         ]
       }
     }
@@ -190,7 +190,7 @@ bot.onText(/\/pair(?:\s+(.+))?/, async (msg, match) => {
   if (!text) {
     userStates.set(userId, { step: 'awaiting_number' });
     return bot.sendMessage(chatId, 
-      `🔐 *Please send your WhatsApp number*\n\nExample: /pair 263xxxxxxxxx\n\nOr just type: 263xxxxxxxxxx`,
+      `🔐 *Please send your WhatsApp number*\n\nExample: /pair 263xxxxxxxxx\n\nOr just type: 263xxxxxxxxx`,
       { parse_mode: 'Markdown' }
     );
   }
@@ -327,8 +327,9 @@ bot.on('message', async (msg) => {
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: [
-            [{ text: '📢 Channel 1', url: 'https://t.me/iconxmdtech' }],
-            [{ text: '📢 Channel 2', url: 'https://t.me/iconxmd' }],
+            [{ text: '📢 Channel 1', url: 'https://t.me/iconxmd' }],
+            [{ text: '📢 Channel 2', url: 'https://t.me/iconxmdtech' }],
+            [{ text: '👥 Group', url: 'https://t.me/+jXEXXZRSsxo1NzBk' }],
             [{ text: '✅ I have joined', callback_data: 'check_join' }]
           ]
         }
@@ -456,7 +457,7 @@ bot.on('polling_error', (error) => {
   process.env.RESTART_COUNT = String(restartCount + 1);
 
   console.log('🤖 Telegram Bot is running...');
-  console.log('✅ Bot Username: @bot_hosting_v1_bot');
+  console.log('✅ Bot Username: @NEXUSXMDBOT');
   console.log('✅ Features: /pair, /unpair, /start');
 })();
 

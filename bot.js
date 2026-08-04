@@ -235,7 +235,7 @@ bot.onText(/\/start/, async (msg) => {
     const imageUrls = [
       'https://i.postimg.cc/NMn8rzqh/image1.png',
       'https://telegra.ph/file/8b2d5c6f7e8d9c0b1a2e.jpg',
-      'https://i.ibb.co/NMn8rzqh/image1.png',
+      'https://i.postimg.cc/G2TZMDFN/Chat-GPT-Image-Jul-31-2026-09-22-12-PM.png',
     ];
 
     let imageSent = false;
@@ -250,7 +250,7 @@ bot.onText(/\/start/, async (msg) => {
             parse_mode: 'Markdown',
             reply_markup: {
               inline_keyboard: [
-                [{ text: "👑 Owner", url: "https://t.me/shadowhacr" }],
+                [{ text: "👑 Owner", url: "https://t.me/iconxmdofficial" }],
                 [{ text: "📋 Commands", callback_data: "show_commands" }]
               ]
             }
@@ -274,7 +274,7 @@ bot.onText(/\/start/, async (msg) => {
           parse_mode: 'Markdown',
           reply_markup: {
             inline_keyboard: [
-              [{ text: "👑 Owner", url: "https://t.me/shadowhacr" }],
+              [{ text: "👑 Owner", url: "https://t.me/iconxmdofficial" }],
               [{ text: "📋 Commands", callback_data: "show_commands" }]
             ]
           }
@@ -291,7 +291,7 @@ bot.onText(/\/start/, async (msg) => {
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: [
-            [{ text: "👑 Owner", url: "https://t.me/shadowhacr" }],
+            [{ text: "👑 Owner", url: "https://t.me/iconxmdofficial" }],
             [{ text: "📋 Commands", callback_data: "show_commands" }]
           ]
         }

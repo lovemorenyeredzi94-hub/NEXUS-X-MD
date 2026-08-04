@@ -6406,7 +6406,7 @@ break;
 case 'play':
 case 'song':
 case 'ytmp3':
-case 'mp3'::
+case 'mp3':
 case 'music':
 case 'audio': {
   if (!text) return reply(`🎵 Please provide a song name or YouTube link`)

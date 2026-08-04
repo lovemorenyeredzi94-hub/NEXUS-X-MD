@@ -1391,6 +1391,7 @@ case 'menu2': {
 ┃ 🎥 ᴠɪᴅᴇᴏ
 ┃ ├ ${prefix}ʏᴛᴍᴘ4
 ┃ ├ ${prefix}ᴛɪᴋᴛᴏᴋ
+┃ ├ ${prefix}ᴛɪᴋᴛᴏᴋ2
 ┃ ├ ${prefix}ɪɴsᴛᴀɢʀᴀᴍ
 ┃ ├ ${prefix}ꜰᴀᴄᴇʙᴏᴏᴋ
 ┃ ├ ${prefix}ᴛᴡɪᴛᴛᴇʀ
@@ -2111,6 +2112,7 @@ case 'downloadmenu': {
 ┃
 ┃ 🎥 ᴠɪᴅᴇᴏ
 ┃ ├ ${prefix}ʏᴛᴍᴘ4
+┃ ├ ${prefix}ᴛɪᴋᴛᴏᴋ2
 ┃ ├ ${prefix}ᴛɪᴋᴛᴏᴋ
 ┃ ├ ${prefix}ɪɴsᴛᴀɢʀᴀᴍ
 ┃ ├ ${prefix}ꜰᴀᴄᴇʙᴏᴏᴋ
@@ -6402,74 +6404,235 @@ break;
 // ══════════════════════════════════════════════════════════
    
 case 'play':
-case 'song': {
-  if (!text) return reply(`🎵 Provide a song name`)
-
+case 'song':
+case 'ytmp3':
+case 'mp3'::
+case 'music':
+case 'audio': {
+  if (!text) return reply(`🎵 Please provide a song name or YouTube link`)
+  
   try {
-    await bad.sendMessage(m.chat, { react: { text: '🎶', key: m.key } })
-
-    const yts = require('yt-search')
-    const axios = require('axios')
-
-    // 1️⃣ YouTube Search
-    const search = await yts(text)
-    if (!search.videos.length) {
-      await bad.sendMessage(m.chat, { react: { text: '❌', key: m.key } })
-      return reply('❌ No results found')
-    }
-
-    const video = search.videos[0]
-
-    // 2️⃣ API Call
-    const api = `https://arslan-apis-v2.vercel.app/download/ytmp3?url=${video.url}`
-    const { data } = await axios.get(api, {
-      params: {
-        url: video.url,
-        format: 'mp3'
+    await bad.sendMessage(m.chat, { react: { text: '⏳', key: m.key } });
+    
+    // ========== DYNAMIC IMPORTS ==========
+    const yts = require('yt-search');
+    const axios = require('axios');
+    const ytdl = require('ytdl-core');
+    
+    // ========== YOUTUBE SEARCH ==========
+    let video;
+    const query = text;
+    
+    // Check if it's a YouTube URL
+    if (query.includes('youtube.com/watch?v=') || query.includes('youtu.be/')) {
+      try {
+        const info = await ytdl.getInfo(query);
+        video = {
+          url: query,
+          title: info.videoDetails.title,
+          thumbnail: info.videoDetails.thumbnails[info.videoDetails.thumbnails.length - 1].url,
+          author: { name: info.videoDetails.author.name }
+        };
+        console.log(`✅ Found video from URL: ${video.title}`);
+      } catch (err) {
+        console.log('URL fetch failed, falling back to search');
+        const search = await yts(query);
+        if (!search.videos || !search.videos.length) {
+          await bad.sendMessage(m.chat, { react: { text: '❌', key: m.key } });
+          return reply('❌ No results found');
+        }
+        video = search.videos[0];
       }
-    })
-
-    if (!data.status || !data.result?.download) {
-      throw new Error('Download failed')
+    } else {
+      // Search for the song
+      const search = await yts(query);
+      if (!search.videos || !search.videos.length) {
+        await bad.sendMessage(m.chat, { react: { text: '❌', key: m.key } });
+        return reply(`❌ No results found for: ${query}`);
+      }
+      video = search.videos[0];
     }
-
-    const result = data.result
-
-    // 3️⃣ Send Audio
-    await bad.sendMessage(
-      m.chat,
+    
+    console.log(`🎵 Found: ${video.title}`);
+    
+    // ========== API FALLBACK SYSTEM ==========
+    const apis = [
       {
-        audio: { url: result.download },
-        mimetype: 'audio/mpeg',
-        fileName: `${result.title}.mp3`,
-        contextInfo: {
-          externalAdReply: {
-            title: result.title,
-            body: result.author?.channelTitle || 'YouTube Audio',
-            thumbnailUrl: result.thumbnail,
-            sourceUrl: video.url,
-            mediaType: 1,
-            renderLargerThumbnail: true
+        name: 'Arslan API',
+        url: 'https://arslan-apis-v2.vercel.app/download/ytmp3',
+        getParams: (url) => ({ url }),
+        extractData: (data) => {
+          if (data?.status && data?.result?.download) {
+            return {
+              download: data.result.download,
+              title: data.result.title || data.metadata?.title,
+              thumbnail: data.result.thumbnail || data.metadata?.thumbnail,
+              quality: data.result.quality || data.result.download?.quality || '128kbps'
+            };
           }
+          return null;
         }
       },
-      { quoted: m }
-    )
-
-    await bad.sendMessage(m.chat, { react: { text: '✅', key: m.key } })
-
-  } catch (e) {
-    console.error(e)
-    await bad.sendMessage(m.chat, { react: { text: '❌', key: m.key } })
-    reply('⚠️ Error while processing the request')
+      {
+        name: 'Siputzx API',
+        url: 'https://api.siputzx.my.id/api/d/ytmp3',
+        getParams: (url) => ({ url }),
+        extractData: (data) => {
+          const download = data?.data?.download || data?.result?.download || data?.download || data?.url;
+          if (download) {
+            return {
+              download: download,
+              title: data?.data?.title || data?.result?.title || data?.title,
+              thumbnail: data?.data?.thumbnail || data?.result?.thumbnail || data?.thumbnail,
+              quality: data?.data?.quality || data?.result?.quality || '128kbps'
+            };
+          }
+          return null;
+        }
+      },
+      {
+        name: 'Izumi API',
+        url: 'https://izumiiiiiiii.dpdns.org/downloader/youtube',
+        getParams: (url) => ({ 
+          url: encodeURIComponent(url),
+          format: 'mp3'
+        }),
+        extractData: (data) => {
+          const download = data?.data?.download || data?.result?.download || data?.download || data?.url;
+          if (download) {
+            return {
+              download: download,
+              title: data?.data?.title || data?.result?.title || data?.title,
+              thumbnail: data?.data?.thumbnail || data?.result?.thumbnail || data?.thumbnail,
+              quality: data?.data?.quality || data?.result?.quality || '128kbps'
+            };
+          }
+          return null;
+        }
+      },
+      {
+        name: 'Ootaizumi API',
+        url: 'https://api.ootaizumi.web.id/downloader/youtube',
+        getParams: (url) => ({ url, format: 'mp3' }),
+        extractData: (data) => {
+          if (data?.result?.download) {
+            return {
+              download: data.result.download,
+              title: data.result.title,
+              thumbnail: data.result.thumbnail,
+              quality: data.result.quality || '128kbps'
+            };
+          }
+          return null;
+        }
+      }
+    ];
+    
+    let result = null;
+    let usedAPI = '';
+    let lastError = null;
+    
+    for (const api of apis) {
+      try {
+        console.log(`🔄 Trying ${api.name}...`);
+        const response = await axios.get(api.url, {
+          params: api.getParams(video.url),
+          timeout: 30000
+        });
+        
+        const extracted = api.extractData(response.data);
+        if (extracted && extracted.download) {
+          result = {
+            download: extracted.download,
+            title: extracted.title || video.title,
+            thumbnail: extracted.thumbnail || video.thumbnail,
+            quality: extracted.quality || '128kbps'
+          };
+          usedAPI = api.name;
+          console.log(`✅ ${api.name} Success!`);
+          break;
+        }
+      } catch (err) {
+        console.log(`❌ ${api.name} failed:`, err.message);
+        lastError = err;
+        continue;
+      }
+    }
+    
+    // ========== FALLBACK: Use ytdl-core directly ==========
+    if (!result || !result.download) {
+      console.log('🔄 All APIs failed, trying ytdl-core...');
+      try {
+        const stream = await ytdl(video.url, {
+          filter: 'audioonly',
+          quality: 'highestaudio'
+        });
+        
+        const audioBuffer = await new Promise((resolve, reject) => {
+          const chunks = [];
+          stream.on('data', (chunk) => chunks.push(chunk));
+          stream.on('end', () => resolve(Buffer.concat(chunks)));
+          stream.on('error', reject);
+        });
+        
+        result = {
+          download: audioBuffer,
+          title: video.title,
+          thumbnail: video.thumbnail,
+          quality: 'Highest Audio',
+          isBuffer: true
+        };
+        usedAPI = 'ytdl-core (Direct Download)';
+        console.log('✅ ytdl-core Success!');
+      } catch (err) {
+        console.log('❌ ytdl-core failed:', err.message);
+      }
+    }
+    
+    if (!result || !result.download) {
+      await bad.sendMessage(m.chat, { react: { text: '❌', key: m.key } });
+      return reply("❌ All download methods failed. Please try again later.");
+    }
+    
+    // ========== SEND AUDIO ==========
+    const audioOptions = {
+      mimetype: "audio/mpeg",
+      ptt: false,
+      fileName: `${result.title || 'song'}.mp3`,
+      contextInfo: {
+        externalAdReply: {
+          title: result.title ? result.title.substring(0, 40) : "YouTube Song",
+          body: `▶︎ •၊၊||၊|။||||။‌‌‌‌‌၊|• ★彡NEXUS-X MD彡★\nQuality: ${result.quality}`,
+          thumbnailUrl: result.thumbnail || video.thumbnail,
+          sourceUrl: video.url,
+          mediaType: 1,
+          renderLargerThumbnail: true
+        }
+      }
+    };
+    
+    // If it's a buffer (from ytdl-core)
+    if (result.isBuffer) {
+      audioOptions.audio = result.download;
+    } else {
+      audioOptions.audio = { url: result.download };
+    }
+    
+    await bad.sendMessage(m.chat, audioOptions, { quoted: m });
+    await bad.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
+    
+  } catch (err) {
+    console.error('PLAY ERROR:', err);
+    await bad.sendMessage(m.chat, { react: { text: '❌', key: m.key } });
+    reply('❌ Error occurred while processing. Please try again later.');
   }
 }
-break
+break;
       //═══════════════════════════════════════════════════════════
 // TIKTOK - Download TikTok Videos
 // ═══════════════════════════════════════════════════════════
-case "tiktok":
-case "tt": {
+case "tiktok2":
+case "tt2": {
     if (!text) return reply(example("https://vt.tiktok.com/xxxxx"));
     if (!text.includes('tiktok.com')) return reply("ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴛɪᴋᴛᴏᴋ ʟɪɴᴋ");
     
@@ -6490,9 +6653,7 @@ case "tt": {
 💬 *ᴄᴏᴍᴍᴇɴᴛs:* ${data.metrics?.comment_count?.toLocaleString() || 0}
 
 ╰━━━━━━━━━━━━━━━━━╯`;
-
-            await bad.sendMessage(m.chat, {
-                video: {url: data.url},
+,
                 caption: caption,
                 mimetype: 'video/mp4'
             }, {quoted: m});
@@ -6507,6 +6668,130 @@ case "tt": {
         await bad.sendMessage(m.chat, {react: {text: '❌', key: m.key}});
         return reply(`❌ ᴛɪᴋᴛᴏᴋ ᴅᴏᴡɴʟᴏᴀᴅ ғᴀɪʟᴇᴅ\n\n${error.message}`);
     }
+}
+break;
+// TIKTOK VIDEO 
+
+case 'tiktok':
+case 'tt':
+case 'ttdl':
+case 'tiktokdl': {
+  if (!text) return reply(`❌ Please provide a TikTok video link.\n\nExample: .tiktok https://vm.tiktok.com/xxxxx`)
+  
+  try {
+    await bad.sendMessage(m.chat, { react: { text: '⏳', key: m.key } });
+    
+    const axios = require('axios');
+    
+    // Extract URL from the command
+    const url = text.trim();
+    
+    // Validate TikTok URL
+    const tiktokPatterns = [
+      /https?:\/\/(?:www\.)?tiktok\.com\//,
+      /https?:\/\/(?:vm\.)?tiktok\.com\//,
+      /https?:\/\/(?:vt\.)?tiktok\.com\//,
+      /https?:\/\/(?:www\.)?tiktok\.com\/@/,
+      /https?:\/\/(?:www\.)?tiktok\.com\/t\//
+    ];
+    
+    const isValidUrl = tiktokPatterns.some(pattern => pattern.test(url));
+    
+    if (!isValidUrl) {
+      await bad.sendMessage(m.chat, { react: { text: '❌', key: m.key } });
+      return reply(`❌ Invalid TikTok link. Please provide a valid TikTok video URL.`);
+    }
+    
+    // ========== TIKTOK DOWNLOAD API ==========
+    const apiUrl = `https://api.siputzx.my.id/api/d/tiktok`;
+    
+    const response = await axios.get(apiUrl, {
+      params: { url: url },
+      timeout: 30000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    // Check if API returned success
+    if (!response.data || !response.data.status) {
+      await bad.sendMessage(m.chat, { react: { text: '❌', key: m.key } });
+      return reply(`❌ Failed to download TikTok video. The video might be private or unavailable.`);
+    }
+    
+    const data = response.data;
+    const result = data.result || data.data || {};
+    
+    // Extract video info
+    const videoUrl = result.video || result.videoUrl || result.download || result.url;
+    const title = result.title || result.desc || 'TikTok Video';
+    const author = result.author || result.username || 'Unknown';
+    const thumbnail = result.thumbnail || result.cover || '';
+    
+    if (!videoUrl) {
+      await bad.sendMessage(m.chat, { react: { text: '❌', key: m.key } });
+      return reply(`❌ No video URL found. Please try a different link.`);
+    }
+    
+    // ========== SEND VIDEO ==========
+    const caption = `🎵 *TIKTOK DOWNLOADER*\n\n` +
+                    `📝 *Title:* ${title.substring(0, 50)}${title.length > 50 ? '...' : ''}\n` +
+                    `👤 *Author:* ${author}\n` +
+                    `📥 *Downloaded by NEXUS-X MD*`;
+    
+    // Try to send as video
+    try {
+      await bad.sendMessage(
+        m.chat,
+        {
+          video: { url: videoUrl },
+          mimetype: 'video/mp4',
+          caption: caption,
+          thumbnail: thumbnail ? { url: thumbnail } : undefined,
+          contextInfo: {
+            externalAdReply: {
+              title: title.substring(0, 40),
+              body: `🎵 TikTok by ${author}`,
+              thumbnailUrl: thumbnail || '',
+              sourceUrl: url,
+              mediaType: 1,
+              renderLargerThumbnail: true
+            }
+          }
+        },
+        { quoted: m }
+      );
+      
+      await bad.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
+      
+    } catch (sendError) {
+      // If video send fails, try sending as document
+      try {
+        await bad.sendMessage(
+          m.chat,
+          {
+            document: { url: videoUrl },
+            mimetype: 'video/mp4',
+            fileName: `${title.substring(0, 30)}.mp4`,
+            caption: caption
+          },
+          { quoted: m }
+        );
+        
+        await bad.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
+        
+      } catch (docError) {
+        console.error('Failed to send video:', docError);
+        await bad.sendMessage(m.chat, { react: { text: '❌', key: m.key } });
+        return reply(`❌ Failed to send the video. The file might be too large.`);
+      }
+    }
+    
+  } catch (err) {
+    console.error('TIKTOK ERROR:', err);
+    await bad.sendMessage(m.chat, { react: { text: '❌', key: m.key } });
+    reply(`❌ Error downloading TikTok video. Please try again later.`);
+  }
 }
 break;
 // ═══════════════════════════════════════════════════════════

@@ -6653,7 +6653,7 @@ case "tt2": {
 💬 *ᴄᴏᴍᴍᴇɴᴛs:* ${data.metrics?.comment_count?.toLocaleString() || 0}
 
 ╰━━━━━━━━━━━━━━━━━╯`;
-,
+
                 caption: caption,
                 mimetype: 'video/mp4'
             }, {quoted: m});

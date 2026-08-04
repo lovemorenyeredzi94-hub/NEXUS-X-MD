@@ -1,212 +1,25 @@
 /**
- * NEXUS-X MD - Main Bot File (Panel-Optimized)
- * Create By SHADOW OFFICIAL
- * Contact: +923271054080
- */
+   * Create By SHADOW OFFICIAL
+   * Contact Me on 923271054080
+*/
 
 const fs = require('fs');
 const path = require('path');
+const readline = require('readline');
 const chalk = require('chalk');
 const figlet = require('figlet');
-const { spawn } = require('child_process');
 
-const PAIRING_DIR = './kingbadboitimewisher/pairing/';
 const AUTH_FILE = './auth.json';
+const PAIRING_DIR = './kingbadboitimewisher/pairing/';
+const startpairing = require('./pair');
 
-// ========== CONFIGURATION ==========
-const CONFIG = {
-    keepAliveInterval: 30, // Seconds between keep-alive pings
-    memoryCheckInterval: 60, // Seconds between memory checks
-    maxMemoryMB: 500, // Max memory before auto-restart
-    restartDelay: 5000, // Delay before restarting
-    logFile: './bot.log' // Log file for panel to see activity
-};
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-// ========== COLOR CONFIG ==========
-const colors = {
-    reset: '\x1b[0m',
-    red: '\x1b[31m',
-    green: '\x1b[32m',
-    yellow: '\x1b[33m',
-    blue: '\x1b[34m',
-    magenta: '\x1b[35m',
-    cyan: '\x1b[36m',
-    white: '\x1b[37m',
-    gray: '\x1b[90m'
-};
-
-// ========== LOGGING SYSTEM ==========
-const log = (message, type = 'info') => {
-    const timestamp = new Date().toISOString();
-    const colors = {
-        info: '\x1b[36m',
-        success: '\x1b[32m',
-        error: '\x1b[31m',
-        warn: '\x1b[33m',
-        debug: '\x1b[90m'
-    };
-    const prefix = {
-        info: 'ℹ️',
-        success: '✅',
-        error: '❌',
-        warn: '⚠️',
-        debug: '🔍'
-    };
-    console.log(`${colors[type] || colors.info}[${timestamp}] ${prefix[type] || 'ℹ️'} ${message}\x1b[0m`);
-    
-    // Also write to log file for panel to detect activity
-    try {
-        fs.appendFileSync(CONFIG.logFile, `[${timestamp}] ${message}\n`);
-    } catch (err) {
-        // Silently fail
-    }
-};
-
-// ========== PANEL KEEP-ALIVE SYSTEM ==========
-const startPanelKeepAlive = () => {
-    log('🔄 Starting panel keep-alive system...', 'info');
-    
-    // Update log file every 30 seconds to show activity
-    setInterval(() => {
-        try {
-            const timestamp = new Date().toISOString();
-            const memory = process.memoryUsage();
-            const memMB = (memory.rss / 1024 / 1024).toFixed(2);
-            
-            // Write to log file - this keeps panel thinking bot is active
-            fs.appendFileSync(CONFIG.logFile, `[${timestamp}] KEEP-ALIVE | Memory: ${memMB}MB | Uptime: ${Math.floor(process.uptime())}s\n`);
-            
-            // Also update auth.json timestamp
-            if (fs.existsSync(AUTH_FILE)) {
-                fs.utimesSync(AUTH_FILE, new Date(), new Date());
-            }
-            
-        } catch (err) {
-            // Silently fail
-        }
-    }, CONFIG.keepAliveInterval * 1000);
-    
-    // Memory monitoring - restart if memory too high
-    setInterval(() => {
-        try {
-            const memory = process.memoryUsage();
-            const memMB = memory.rss / 1024 / 1024;
-            
-            if (memMB > CONFIG.maxMemoryMB) {
-                log(`⚠️ Memory usage high: ${memMB.toFixed(2)}MB. Restarting...`, 'warn');
-                process.exit(0); // Panel will auto-restart
-            }
-        } catch (err) {
-            // Silently fail
-        }
-    }, CONFIG.memoryCheckInterval * 1000);
-    
-    log(`✅ Panel keep-alive active (every ${CONFIG.keepAliveInterval}s)`, 'success');
-};
-
-// ========== CONSOLE OUTPUT KEEPER ==========
-const startConsoleKeeper = () => {
-    // Keep printing to console so panel sees activity
-    let counter = 0;
-    setInterval(() => {
-        counter++;
-        const memory = process.memoryUsage();
-        const memMB = (memory.rss / 1024 / 1024).toFixed(2);
-        const uptime = Math.floor(process.uptime());
-        
-        // Only show every 5th message to keep console clean
-        if (counter % 5 === 0) {
-            log(`📊 Status | Uptime: ${uptime}s | Memory: ${memMB}MB | Active: ${getActiveSessions()}`, 'debug');
-        }
-    }, 10 * 1000);
-};
-
-// ========== GET ACTIVE SESSIONS ==========
-const getActiveSessions = () => {
-    try {
-        if (!fs.existsSync(PAIRING_DIR)) return 0;
-        const entries = fs.readdirSync(PAIRING_DIR, { withFileTypes: true });
-        return entries.filter(e => e.isDirectory() && e.name.endsWith('@s.whatsapp.net')).length;
-    } catch {
-        return 0;
-    }
-};
-
-// ========== SPAWN BOT PROCESS WITH AUTO-RESTART ==========
-let botProcess = null;
-let restartCount = 0;
-const MAX_RESTARTS = 50; // Prevent infinite restart loops
-
-const spawnBot = () => {
-    if (restartCount > MAX_RESTARTS) {
-        log('⚠️ Max restarts reached. Waiting 5 minutes...', 'warn');
-        setTimeout(() => {
-            restartCount = 0;
-            spawnBot();
-        }, 5 * 60 * 1000);
-        return;
-    }
-    
-    log(`🚀 Starting bot process (attempt ${restartCount + 1})...`, 'info');
-    
-    // Spawn bot.js as a child process
-    botProcess = spawn('node', ['bot.js'], {
-        stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
-        env: { ...process.env, PANEL_MODE: 'true' }
-    });
-    
-    // Forward output to console
-    botProcess.stdout.on('data', (data) => {
-        const output = data.toString().trim();
-        if (output) {
-            console.log(`[BOT] ${output}`);
-            // Also write to log file
-            try {
-                fs.appendFileSync(CONFIG.logFile, `[BOT] ${output}\n`);
-            } catch (err) {}
-        }
-    });
-    
-    botProcess.stderr.on('data', (data) => {
-        const output = data.toString().trim();
-        if (output) {
-            console.error(`[BOT ERROR] ${output}`);
-            // Also write to log file
-            try {
-                fs.appendFileSync(CONFIG.logFile, `[BOT ERROR] ${output}\n`);
-            } catch (err) {}
-        }
-    });
-    
-    // Handle process exit
-    botProcess.on('exit', (code, signal) => {
-        log(`⚠️ Bot process exited with code ${code}, signal ${signal}`, 'warn');
-        
-        // Restart after delay
-        setTimeout(() => {
-            restartCount++;
-            spawnBot();
-        }, CONFIG.restartDelay);
-    });
-    
-    // Handle errors
-    botProcess.on('error', (err) => {
-        log(`❌ Bot process error: ${err.message}`, 'error');
-        setTimeout(() => {
-            restartCount++;
-            spawnBot();
-        }, CONFIG.restartDelay);
-    });
-    
-    return botProcess;
-};
-
-// ========== AUTO-LOAD PAIRED USERS ==========
 const autoLoadPairs = async () => {
-    log('🔄 Auto-loading paired users...', 'info');
+    console.log(chalk.cyan('🔄 Auto-loading all paired users...'));
     
     if (!fs.existsSync(PAIRING_DIR)) {
-        log('❌ Pairing directory not found.', 'error');
+        console.log(chalk.red('❌ Pairing directory not found.'));
         return;
     }
 
@@ -216,80 +29,188 @@ const autoLoadPairs = async () => {
         .filter(name => name.endsWith('@s.whatsapp.net'));
 
     if (pairedUsers.length === 0) {
-        log('ℹ️ No paired users found.', 'info');
+        console.log(chalk.yellow('ℹ️  No paired users found.'));
         return;
     }
 
-    log(`✅ Found ${pairedUsers.length} paired users.`, 'success');
+    console.log(chalk.green(`✅ Found ${pairedUsers.length} paired users. Starting connections...`));
+    console.log(chalk.blue('⏳ Waiting 4 seconds before starting connections...'));
+    await delay(4000);
+
+    for (let i = 0; i < pairedUsers.length; i++) {
+        const userNumber = pairedUsers[i];
+        
+        try {
+            console.log(chalk.blue(`🔄 Connecting user ${i + 1}/${pairedUsers.length}: ${userNumber}`));
+            await startpairing(userNumber);
+            console.log(chalk.green(`✅ Connected successfully: ${userNumber}`));
+            
+            if (i < pairedUsers.length - 1) {
+                console.log(chalk.blue('⏳ Waiting 4 seconds before next connection...'));
+                await delay(4000);
+            }
+        } catch (error) {
+            console.log(chalk.red(`❌ Failed for ${userNumber}: ${error.message}`));
+            
+            if (i < pairedUsers.length - 1) {
+                console.log(chalk.blue('⏳ Waiting 4 seconds before retry...'));
+                await delay(4000);
+            }
+        }
+    }
+
+    console.log(chalk.green('✅ All paired users processed.'));
+    console.log(chalk.blue('⏳ Waiting 4 seconds before continuing...'));
+    await delay(4000);
 };
 
-// ========== INITIALIZE BOT ==========
 const initializeBot = async () => {
     console.clear();
-    console.log(chalk.cyan(figlet.textSync('NEXUS-X', {
+    console.log(chalk.cyan(figlet.textSync('NEXUS', {
         font: 'Standard',
         horizontalLayout: 'default',
         verticalLayout: 'default'
     })));
     
     console.log(chalk.yellow('\n═══════════════════════════════════════════════'));
-    console.log(chalk.green('   𝙽𝙴𝚇𝚄𝚂-𝚇 𝙿𝙰𝙽𝙴𝙻 𝙾𝙿𝚃𝙸𝙼𝙸𝚉𝙴𝙳       '));
+    console.log(chalk.green('   𝙽𝙴𝚇𝚄𝚂 𝐩𝐚𝐢𝐫𝐢𝐧𝐠 𝐬𝐲𝐬𝐭𝐞𝐦       '));
     console.log(chalk.yellow('═══════════════════════════════════════════════\n'));
 
-    // Start panel keep-alive FIRST
-    startPanelKeepAlive();
-    startConsoleKeeper();
-
-    // Auto-load pairs
     await autoLoadPairs();
-
-    // Spawn bot as child process
-    spawnBot();
-
-    // Write initial log
-    try {
-        fs.writeFileSync(CONFIG.logFile, `=== NEXUS-X BOT STARTED ===\n`);
-        fs.appendFileSync(CONFIG.logFile, `Started at: ${new Date().toISOString()}\n`);
-        fs.appendFileSync(CONFIG.logFile, `PID: ${process.pid}\n`);
-        fs.appendFileSync(CONFIG.logFile, `Node version: ${process.version}\n`);
-        fs.appendFileSync(CONFIG.logFile, `=== SYSTEM READY ===\n\n`);
-    } catch (err) {}
-
-    console.log(chalk.green('\n✅ NEXUS-X system is ready and running!\n'));
-    console.log(chalk.blue('📊 Bot monitoring active...'));
-    console.log(chalk.gray(`🔄 Keep-alive: Every ${CONFIG.keepAliveInterval}s`));
-    console.log(chalk.gray(`💾 Memory limit: ${CONFIG.maxMemoryMB}MB`));
-    console.log(chalk.gray(`📝 Log file: ${CONFIG.logFile}`));
-    console.log(chalk.gray('💡 Press Ctrl+C to stop the bot\n'));
+    launchBot();
 };
 
-// ========== GRACEFUL SHUTDOWN ==========
-const gracefulShutdown = () => {
-    console.log(chalk.yellow('\n\n⚠️ Shutting down gracefully...'));
-    
-    if (botProcess) {
-        console.log(chalk.gray('Stopping bot process...'));
-        botProcess.kill();
+function launchBot() {
+    console.clear();
+    console.log(chalk.green('🚀 Starting Nexus system...\n'));
+
+    let telegramLoaded = false;
+    let whatsappLoaded = false;
+
+    // Load Telegram bot (bot.js)
+    const botPath = path.join(__dirname, 'bot.js');
+    if (fs.existsSync(botPath)) {
+        try {
+            console.log(chalk.blue('📱 Loading Telegram pairing system...'));
+            require('./bot');
+            telegramLoaded = true;
+            console.log(chalk.green('✅N E X U S  bot loaded successfully!'));
+        } catch (error) {
+            console.log(chalk.red('❌ Failed to load Telegram bot (bot.js):'));
+            console.log(chalk.red('   Error:', error.message));
+            
+            if (error.stack) {
+                console.log(chalk.gray('   Stack:', error.stack.split('\n')[1].trim()));
+            }
+            
+            console.log(chalk.yellow('⚠️  Continuing without Telegram bot...\n'));
+        }
+    } else {
+        console.log(chalk.yellow('⚠️  bot.js not found, skipping Telegram bot...\n'));
     }
-    
+
+    // Load WhatsApp commands (drenox.js)
+    const drenoxPath = path.join(__dirname, 'drenox.js');
+    if (fs.existsSync(drenoxPath)) {
+        try {
+            console.log(chalk.blue('💬 Loading WhatsApp commands system...'));
+            const drenoxModule = require('./drenox');
+            whatsappLoaded = true;
+            console.log(chalk.green('✅ WhatsApp commands loaded successfully!'));
+            
+        } catch (error) {
+            console.log(chalk.red('❌ Failed to load WhatsApp commands (drenox.js):'));
+            console.log(chalk.red('   Error:', error.message));
+            
+            if (error.stack) {
+                console.log(chalk.gray('   Stack:', error.stack.split('\n')[1].trim()));
+            }
+            
+            console.log(chalk.yellow('⚠️  Continuing without WhatsApp commands...\n'));
+        }
+    } else {
+        console.log(chalk.yellow('⚠️  drenox.js not found, skipping WhatsApp commands...\n'));
+    }
+
+    // Summary
+    console.log(chalk.cyan('\n═══════════════════════════════════════════════'));
+    console.log(chalk.bold.white('NEXUS BOT INITIALIZATION SUMMARY          '));
+    console.log(chalk.cyan('═══════════════════════════════════════════════'));
+    console.log(telegramLoaded ? chalk.green('✅NEXUS тɛℓɛɢяαм вσт: Active') : chalk.red('❌NEXUS тɛℓɛɢяαм вσт : Inactive'));
+    console.log(whatsappLoaded ? chalk.green('✅ WhatsApp Commands: Active') : chalk.red('❌ WhatsApp Commands: Inactive'));
+    console.log(chalk.cyan('═══════════════════════════════════════════════\n'));
+
+    if (!telegramLoaded && !whatsappLoaded) {
+        console.log(chalk.red('⚠️  Warning: No bot systems loaded! Check your files.\n'));
+    } else {
+        console.log(chalk.green('✅ NEXUS system is ready and running!\n'));
+    }
+
+    // Error handlers
+    const ignoredErrors = [
+        'Socket connection timeout',
+        'EKEYTYPE',
+        'item-not-found',
+        'rate-overlimit',
+        'Connection Closed',
+        'Timed Out',
+        'Value not found'
+    ];
+
+    process.on('unhandledRejection', (reason, promise) => {
+        if (ignoredErrors.some(e => String(reason).includes(e))) return;
+        
+        console.log(chalk.red('\n⚠️  Unhandled Promise Rejection:'));
+        console.log(chalk.yellow('Reason:'), reason);
+    });
+
+    process.on('uncaughtException', (error) => {
+        if (ignoredErrors.some(e => String(error).includes(e))) return;
+        
+        console.log(chalk.red('\n❌ Uncaught Exception:'));
+        console.log(chalk.yellow('Error:'), error.message);
+        if (error.stack) {
+            console.log(chalk.gray(error.stack));
+        }
+    });
+
+    const originalConsoleError = console.error;
+    console.error = function (message, ...optionalParams) {
+        if (typeof message === 'string' && ignoredErrors.some(e => message.includes(e))) {
+            return;
+        }
+        originalConsoleError.apply(console, [message, ...optionalParams]);
+    };
+
+    const originalStderrWrite = process.stderr.write;
+    process.stderr.write = function (message, encoding, fd) {
+        if (typeof message === 'string' && ignoredErrors.some(e => message.includes(e))) {
+            return;
+        }
+        originalStderrWrite.apply(process.stderr, arguments);
+    };
+
+    console.log(chalk.blue('📊 Bot monitoring active...'));
+    console.log(chalk.gray('Press Ctrl+C to stop the bot\n'));
+}
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+    console.log(chalk.yellow('\n\n⚠️  Shutting down gracefully...'));
     console.log(chalk.green('👋 Goodbye!'));
     process.exit(0);
-};
+});
 
-process.on('SIGINT', gracefulShutdown);
-process.on('SIGTERM', gracefulShutdown);
+process.on('SIGTERM', () => {
+    console.log(chalk.yellow('\n\n⚠️  Received termination signal...'));
+    process.exit(0);
+});
 
-// ========== START THE BOT ==========
 initializeBot().catch((error) => {
     console.log(chalk.red('\n❌ Fatal error during initialization:'));
     console.log(chalk.yellow('Error:'), error.message);
     if (error.stack) {
         console.log(chalk.gray(error.stack));
     }
-    
-    // Keep trying to restart
-    setTimeout(() => {
-        console.log(chalk.green('🔄 Restarting...'));
-        initializeBot().catch(() => {});
-    }, 5000);
+    process.exit(1);
 });
